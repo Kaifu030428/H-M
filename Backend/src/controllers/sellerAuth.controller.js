@@ -3,17 +3,17 @@ const jwt = require("jsonwebtoken");
 
 const registerSellerController = async (req, res) => {
   try {
-    let { sellerName, sellerPhone, sellerEmail, sellerAdhaar, sellerPassword } =
-      req.body;
+    const { sellerName, sellerPhone, sellerEmail, sellerAdhaar, sellerPassword } = req.body;
 
-    let existinSeller = await sellerModel.findOne({ sellerEmail });
+    const existingSeller = await sellerModel.findOne({ sellerEmail });
 
-    if (existinSeller)
+    if (existingSeller) {
       return res.status(422).json({
-        message: "email has already taken",
+        message: "Email is already taken",
       });
+    }
 
-    let newSeller = await sellerModel.create({
+    const newSeller = await sellerModel.create({
       sellerName,
       sellerPhone,
       sellerEmail,
@@ -21,28 +21,26 @@ const registerSellerController = async (req, res) => {
       sellerPassword,
     });
 
-    if (!newSeller)
-      return res.status(400).json({
-        message: "something went wrong",
-      });
-
-    let sellerToken = jwt.sign(
+    const sellerToken = jwt.sign(
       { seller_id: newSeller._id },
       process.env.JWT_SELLER_SECRET,
-      {
-        expiresIn: "1h",
-      }
+      { expiresIn: "1h" }
     );
-    res.cookie("sellerToken", sellerToken);
 
-    return res.staus(201).json({
-      message: "seller id created",
+    res.cookie("sellerToken", sellerToken, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res.status(201).json({
+      message: "Seller account created successfully",
       seller: newSeller,
     });
   } catch (error) {
-    console.log("error in seller register api->", error);
     return res.status(500).json({
-      message: "internal server error",
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
@@ -51,45 +49,63 @@ const loginSellerController = async (req, res) => {
   try {
     const { sellerEmail, sellerPassword } = req.body;
 
-    let seller = await sellerModel.findOne({ sellerEmail });
-    if (!seller)
+    const seller = await sellerModel.findOne({ sellerEmail });
+    if (!seller) {
       return res.status(422).json({
-        message: "email not found , Register first",
+        message: "Email not found. Please register first",
       });
+    }
 
-      let cp = seller.comparePass(sellerPassword)
+    const isMatch = await seller.comparePass(sellerPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+      });
+    }
 
-      if(!cp)return res.status(422).josn({
-        message:"invalid credentials"
-      })
+    const sellerToken = jwt.sign(
+      { seller_id: seller._id },
+      process.env.JWT_SELLER_SECRET,
+      { expiresIn: "1h" }
+    );
 
-      return res.status(200).json({
-        message:"user logged in successfully",
-        sellerUser : seller
-      })
+    res.cookie("sellerToken", sellerToken, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res.status(200).json({
+      message: "Seller logged in successfully",
+      seller,
+    });
   } catch (error) {
     return res.status(500).json({
-      message: "internal server error",
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
 
-const sellerProfileController = async(req, res)=>{
+const sellerProfileController = async (req, res) => {
   try {
+    const sellerProfile = req.seller;
+    if (!sellerProfile) {
+      return res.status(404).json({
+        message: "Seller profile not found",
+      });
+    }
 
-    let sellerProfile = req.seller;
-    if(!sellerProfile)return res.status(404).json({
-        message:"seller profile not found"
-    })
-     return res.status(200).json({
-        message:"seller profile fetched",
-        profile: sellerProfile
-     })
+    return res.status(200).json({
+      message: "Seller profile fetched successfully",
+      profile: sellerProfile,
+    });
   } catch (error) {
     return res.status(500).json({
-        message: "internal server error",
-      });
+      message: "Internal server error",
+      error: error.message,
+    });
   }
-}
+};
 
-module.exports = { registerSellerController, loginSellerController , sellerProfileController };
+module.exports = { registerSellerController, loginSellerController, sellerProfileController };

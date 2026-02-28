@@ -2,7 +2,11 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 export const axiosInstance = axios.create({
-  baseURL: "http://localhost:3000/api",
+  // Ensure the backend url doesn’t end with a slash so we don’t end up with
+  // `https://example.com//api` which can result in 404s on some hosts.
+  baseURL:
+    (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/g, "") +
+    "/api",
   timeout: 15000,
   withCredentials: true,
 });
@@ -10,6 +14,10 @@ export const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
+    // log baseURL in development to help debugging
+    if (import.meta.env.DEV) {
+      console.debug("Axios request to", config.baseURL, config.url);
+    }
     return config;
   },
   (error) => {

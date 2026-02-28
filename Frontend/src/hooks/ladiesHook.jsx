@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProductByCategory } from "../apis/ProductApis";
+import { getProductByCategory } from "../api/ProductApis";
 
 export const fetchProductDataHook = (category) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks

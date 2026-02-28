@@ -1,24 +1,65 @@
-
-import React, { useState } from "react";
-import { Link } from "react-router";
+import React from "react";
+import { Link } from "react-router-dom";
+import { fetchProductDataHook } from "../hooks/ladiesHook";
+import ProductCard from "../components/ProductCard";
 
 const LadiesPage = () => {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const { data, isPending, error } = fetchProductDataHook("ladies");
 
-  const categories = [
-    { id: "all", name: "All" },
-    { id: "dresses", name: "Dresses" },
-    { id: "tops", name: "Tops & T-shirts" },
-    { id: "jeans", name: "Jeans" },
-    { id: "jackets", name: "Jackets & Coats" },
-    { id: "shoes", name: "Shoes" },
-    { id: "accessories", name: "Accessories" },
-  ];
+  if (isPending) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-xl sm:text-2xl font-semibold">Loading...</div>
+      </div>
+    );
+  }
+
+  const rawProducts = data?.productsData || [];
+  const products = Array.isArray(rawProducts)
+    ? rawProducts.filter((p) => p && (p._id != null || p.id != null))
+    : [];
+  const hasNetworkError =
+    (error && (error.code === "ERR_NETWORK" || !error.response)) ||
+    data?.message === "Cannot connect to server";
+  const showNetworkError = hasNetworkError && products.length === 0;
+
+  if (showNetworkError) {
+    return (
+      <div className="flex justify-center items-center min-h-screen px-4">
+        <div className="text-center">
+          <div className="text-red-500 text-lg sm:text-xl mb-2">
+            Cannot connect to server
+          </div>
+          <div className="text-gray-500 text-sm mb-4">
+            Unable to reach backend. Please check your internet connection or try again later.
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !hasNetworkError) {
+    return (
+      <div className="flex justify-center items-center min-h-screen px-4">
+        <div className="text-center">
+          <div className="text-red-500 text-lg sm:text-xl mb-2">
+            Error: {error.response?.data?.message || error.message || "Unknown error"}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Banner */}
-      <div className="relative w-full h-[500px] overflow-hidden mb-12">
+      {/* Hero Banner - Responsive */}
+      <div className="relative w-full h-[250px] xs:h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden mb-4 sm:mb-6 md:mb-12">
         <img
           src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1600&h=900&fit=crop"
           alt="Ladies Collection"
@@ -26,35 +67,32 @@ const LadiesPage = () => {
         />
         <div className="absolute inset-0 bg-black bg-opacity-20"></div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
-          <h1 className="text-5xl md:text-7xl font-bold mb-4 tracking-tight">LADIES</h1>
-          <p className="text-xl md:text-2xl font-light">Discover the latest trends</p>
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold mb-2 sm:mb-4 tracking-tight">LADIES</h1>
+          <p className="text-base sm:text-xl md:text-2xl font-light">Discover the latest trends</p>
         </div>
       </div>
 
-      {/* Category Filters */}
-      <div className="max-w-[1600px] mx-auto px-4 mb-12">
-        <div className="flex flex-wrap gap-4 mb-8 pb-6 border-b border-gray-200">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`px-6 py-2 text-sm font-medium uppercase tracking-wider transition-all ${
-                selectedCategory === category.id
-                  ? "bg-black text-white"
-                  : "bg-white text-black border border-black hover:bg-gray-100"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
+      {/* Products Grid */}
+      <div className="container mx-auto px-4 py-4 sm:py-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 uppercase tracking-wide">Ladies' Collection</h1>
+        {products.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-base sm:text-lg">No products found in this category.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+            {products.map((elem) => (
+              <ProductCard key={elem._id} product={elem} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Shop by Category Grid */}
-      <div className="max-w-[1600px] mx-auto px-4 mb-16">
-        <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide">Shop by Category</h2>
+      {/* Shop by Category Grid - Hidden on mobile, shown on larger screens */}
+      <div className="max-w-[1600px] mx-auto px-4 mb-16 hidden md:block">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 uppercase tracking-wide">Shop by Category</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link to="/ladies/dresses" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500&h=500&fit=crop"
               alt="Dresses"
@@ -65,7 +103,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/tops" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&h=500&fit=crop"
               alt="Tops & T-shirts"
@@ -76,7 +114,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/jeans" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&h=500&fit=crop"
               alt="Jeans"
@@ -87,7 +125,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/jackets" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500&h=500&fit=crop"
               alt="Jackets & Coats"
@@ -98,7 +136,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/shoes" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=500&h=500&fit=crop"
               alt="Shoes"
@@ -109,7 +147,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/accessories" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&h=500&fit=crop"
               alt="Accessories"
@@ -120,7 +158,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/activewear" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=500&h=500&fit=crop"
               alt="Activewear"
@@ -131,7 +169,7 @@ const LadiesPage = () => {
             </div>
           </Link>
 
-          <Link to="/ladies/lingerie" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
+          <Link to="/" className="group relative overflow-hidden bg-[#faf9f8] aspect-square">
             <img
               src="https://images.unsplash.com/photo-1578342976795-062a1b744f37?w=500&h=500&fit=crop"
               alt="Lingerie"
@@ -164,7 +202,7 @@ const LadiesPage = () => {
                 Refresh your wardrobe with our latest spring collection. From breezy dresses to statement pieces, discover styles that celebrate the season.
               </p>
               <Link
-                to="/ladies/new"
+                to="/"
                 className="bg-black text-white px-8 py-3 text-sm font-bold tracking-wider hover:bg-gray-800 transition-all uppercase inline-block"
               >
                 Shop New Arrivals
@@ -186,7 +224,7 @@ const LadiesPage = () => {
               Discover our carefully curated collection of everyday essentials that effortlessly transition from day to night. Timeless pieces designed for the modern woman.
             </p>
             <Link
-              to="/ladies/trending"
+              to="/"
               className="text-sm font-bold tracking-wider underline hover:no-underline uppercase"
             >
               Explore Trending

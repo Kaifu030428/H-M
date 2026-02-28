@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Link } from "react-router";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { getProductByCategory } from "../api/ProductApis";
 
 const KidsPage = () => {
   const [selectedAge, setSelectedAge] = useState("all");
@@ -127,6 +128,12 @@ const KidsPage = () => {
         </div>
       </div>
 
+      {/* Featured Products */}
+      <div className="max-w-[1600px] mx-auto px-4 py-16 mb-12">
+        <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide">Featured Products</h2>
+        <FeaturedGrid category="kids" />
+      </div>
+
       {/* Info Section */}
       <div className="max-w-[1200px] mx-auto px-4 py-12 mb-12">
         <h2 className="text-3xl font-bold mb-6 uppercase tracking-wide">Kids Fashion at H&M</h2>
@@ -147,3 +154,62 @@ const KidsPage = () => {
 };
 
 export default KidsPage;
+
+const FeaturedGrid = ({ category }) => {
+  const [items, setItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    getProductByCategory(category)
+      .then(res => {
+        if (mounted) {
+          const products = res?.productsData || [];
+          setItems(Array.isArray(products) ? products.slice(0, 8) : []);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching featured products:", err);
+        if (mounted) setItems([]);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false };
+  }, [category]);
+
+  if (loading) {
+    return <p className="text-gray-500 text-center py-8">Loading products...</p>;
+  }
+
+  if (!items || items.length === 0) {
+    return <p className="text-gray-500 text-center py-8">No products available.</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      {items.map(p => (
+        <Link 
+          key={p._id} 
+          to={`/product/${p._id}`} 
+          className="group block bg-white rounded overflow-hidden shadow hover:shadow-lg transition-shadow"
+        >
+          {p.images?.[0] ? (
+            <img 
+              src={p.images[0]} 
+              alt={p.productName} 
+              className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" 
+            />
+          ) : (
+            <div className="w-full h-48 bg-gray-100" />
+          )}
+          <div className="p-4">
+            <h3 className="font-semibold text-sm line-clamp-2">{p.productName}</h3>
+            <p className="text-xs text-gray-500 mt-1">{p.price?.currency} {p.price?.amount}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+};

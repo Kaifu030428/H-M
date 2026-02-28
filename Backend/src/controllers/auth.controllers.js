@@ -34,6 +34,7 @@ const loginController = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // Ensure secure cookies in production
     });
 
     const userData = user.toObject();
@@ -47,23 +48,29 @@ const loginController = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       message: "Internal server error",
+      error: error.message,
     });
   }
 };
+
 const registerController = async (req, res) => {
   try {
     let { name, email, phone, password } = req.body;
-    
-    const existingUser = await UserModel.findOne({ email });
 
-    console.log("exists--->", existingUser);
-
-    if (existingUser)
+    if (!name || !email || !phone || !password) {
       return res.status(400).json({
-        message: "user already registered",
+        message: "All fields are required",
       });
+    }
 
-    const newUser = await UserModel.create({
+    const existingUser = await userModel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already registered",
+      });
+    }
+
+    const newUser = await userModel.create({
       name,
       email,
       phone,
@@ -74,17 +81,23 @@ const registerController = async (req, res) => {
       expiresIn: "1h",
     });
 
-    res.cookie("token", token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // Ensure secure cookies in production
+    });
+
+    const userData = newUser.toObject();
+    delete userData.password;
 
     return res.status(201).json({
-      message: "user registered",
-      user: newUser,
+      message: "User registered successfully",
+      user: userData,
     });
   } catch (error) {
-    console.log("error in reg->", error);
     return res.status(500).json({
-      message: "internal server error",
-      error: error,
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
